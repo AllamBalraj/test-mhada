@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://housingmhada.in/sitemap.xml
+Sitemap: https://www.housingmhada.in/sitemap.xml

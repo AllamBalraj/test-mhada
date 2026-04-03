@@ -18,7 +18,7 @@ export default function App() {
             "@context": "https://schema.org",
             "@type": "WebSite",
             name: "MHADA Lottery Mumbai",
-            url: "https://housingmhada.in/",
+            url: "https://www.housingmhada.in/",
           },
         ]}
       />

@@ -119,7 +119,7 @@ export default function TenementDetailsPage({ lottery }: TenementDetailsPageProp
             "@type": "WebPage",
             name: seoTitle,
             description: seoDescription,
-            url: "https://housingmhada.in/",
+            url: "https://www.housingmhada.in/",
           },
         ]}
       />
