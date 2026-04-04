@@ -23,10 +23,28 @@ export default function App() {
           },
         ]}
       />
+      <header className="sr-only">
+        <h1>MHADA Lottery Mumbai 2026</h1>
+        <p>Schemes, eligibility, carpet area, cost, EMD, and key dates.</p>
+      </header>
 
-      <TenementDetailsPage lottery={lottery} onBack={() => {}} />
+      <main className="mx-auto w-full">
+        <section aria-label="MHADA lottery overview" className="sr-only">
+          <h2>Latest MHADA housing schemes in Mumbai</h2>
+        </section>
 
-      <FeedbackWidget />
+        <section aria-label="Eligibility and documents" className="sr-only">
+          <h2>Eligibility, income groups & required documents</h2>
+        </section>
+
+        <section aria-label="Cost and EMD" className="sr-only">
+          <h2>Flat cost, EMD and important dates</h2>
+        </section>
+
+        <TenementDetailsPage lottery={lottery} onBack={() => {}} />
+
+        <FeedbackWidget />
+      </main>
     </div>
   );
 }
