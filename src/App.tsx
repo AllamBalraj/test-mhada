@@ -1,5 +1,6 @@
 import TenementDetailsPage from "./pages/TenementDetailsPage";
 import Seo from "./components/seo/Seo";
+import FeedbackWidget from "./components/feedback/FeedbackWidget";
 
 export default function App() {
   // Minimal placeholder to satisfy TenementDetailsPage's required prop type.
@@ -24,6 +25,8 @@ export default function App() {
       />
 
       <TenementDetailsPage lottery={lottery} onBack={() => {}} />
+
+      <FeedbackWidget />
     </div>
   );
 }
