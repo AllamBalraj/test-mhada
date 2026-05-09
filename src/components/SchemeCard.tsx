@@ -272,23 +272,24 @@ export default function SchemeCard({ scheme, onApply, formatted }: SchemeCardPro
             </div>
           </div> */}
 
-          {/* Action */}
-          {/* <div className="pt-1 border-t border-gray-100">
-            {canApply ? (
-              <button
-                onClick={() => onApply?.(scheme)}
-                className="w-full flex items-center justify-center gap-2 bg-orange-600 hover:bg-orange-700 text-white text-sm font-semibold py-2.5 rounded-xl transition-all shadow-sm group-hover:shadow"
-              >
-                View in Mhada Website
-                <ArrowRight size={15} />
-              </button>
-            ) : (
-              <div className="w-full flex items-center justify-center gap-2 bg-gray-100 text-gray-400 text-sm font-medium py-2.5 rounded-xl cursor-not-allowed">
-                <XCircle size={15} />
-                {scheme.canNotApplyForSchemeReason || "Not Applicable"}
+          {/* View Details action (small text button bottom-right) */}
+          {!isOpen && (
+            <div className="pt-1 border-t border-gray-100">
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    open();
+                  }}
+                  className="inline-flex items-center gap-1 text-sm font-medium text-orange-600 hover:text-orange-700 px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500/30"
+                >
+                  View Details
+                  <ArrowRight size={14} />
+                </button>
               </div>
-            )}
-          </div> */}
+            </div>
+          )}
         </div>
       </div>
 
