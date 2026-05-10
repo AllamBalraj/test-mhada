@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from "react";
+import { Calculator } from "lucide-react";
 import { type Lottery } from "../components/LotteryCard";
 import Navbar from "../components/Navbar";
 import Seo from "../components/seo/Seo";
@@ -12,6 +13,7 @@ import SearchBar from "../components/tenement-details/SearchBar";
 import IncomeGroupFilter from "../components/tenement-details/IncomeGroupFilter";
 import SchemeGrid from "../components/tenement-details/SchemeGrid";
 import EmptyState from "../components/tenement-details/EmptyState";
+import IncomeWidget, { type IncomeModalHandle } from "../components/IncomeWidget";
 
 const INCOME_GROUPS = ["All", "EWS", "LIG", "MIG", "HIG"];
 
@@ -26,6 +28,7 @@ export default function TenementDetailsPage({ lottery }: TenementDetailsPageProp
   const [incomeFilter, setIncomeFilter] = useState<string>("All");
   const [isFiltering, setIsFiltering] = useState<boolean>(false);
   const searchDebounceTimerRef = useRef<number | null>(null);
+  const incomeModalRef = useRef<IncomeModalHandle>(null);
 
   const apiLottery = useActiveLottery(lottery.lotteryCode);
   const apiSchemes = useSchemesForLotteries([501, 502, 503, 504]);
@@ -124,6 +127,8 @@ export default function TenementDetailsPage({ lottery }: TenementDetailsPageProp
         ]}
       />
 
+      <IncomeWidget ref={incomeModalRef} />
+
       <Navbar />
 
       <div className="bg-white border-b border-gray-100 sticky z-40">
@@ -135,17 +140,54 @@ export default function TenementDetailsPage({ lottery }: TenementDetailsPageProp
       </div>
 
       <div className="bg-white border-b border-gray-100 sticky top-12 sm:top-8 z-30 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex flex-col sm:flex-row gap-3 items-start sm:items-center">
-          <div className="flex-1 w-full sm:max-w-sm">
-            <SearchBar value={searchInput} onChange={handleChangeSearch} />
+        <div className="max-w-7xl mx-auto px-4 py-3">
+          {/* Mobile layout: search + button on same row */}
+          <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+            <div className="flex-1 w-full sm:max-w-sm flex gap-2">
+              <div className="flex-1">
+                <SearchBar value={searchInput} onChange={handleChangeSearch} />
+              </div>
+              {/* Calculate EMI button - visible on mobile, beside search */}
+              <button
+                onClick={() => incomeModalRef.current?.openModal()}
+                className="sm:hidden flex items-center justify-center px-3 py-2 bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-700 hover:to-orange-600 text-white rounded-lg font-semibold transition-all shadow-sm flex-shrink-0"
+                type="button"
+                aria-label="Calculate EMI"
+              >
+                <Calculator size={18} />
+              </button>
+            </div>
+
+            {/* Web layout: filters + button */}
+            <div className="hidden sm:flex gap-2 items-center">
+              <IncomeGroupFilter
+                groups={INCOME_GROUPS}
+                selected={incomeFilter}
+                counts={incomeGroupCounts}
+                onSelect={handleIncomeFilter}
+              />
+              {/* Calculate EMI button - hidden on mobile */}
+              <button
+                onClick={() => incomeModalRef.current?.openModal()}
+                className="flex items-center gap-2 px-4 py-1.5 bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-700 hover:to-orange-600 text-white rounded-lg text-sm font-semibold transition-all shadow-sm flex-shrink-0"
+                type="button"
+                aria-label="Calculate EMI"
+              >
+                <Calculator size={16} />
+                <span>Calculate EMI</span>
+              </button>
+            </div>
           </div>
 
-          <IncomeGroupFilter
-            groups={INCOME_GROUPS}
-            selected={incomeFilter}
-            counts={incomeGroupCounts}
-            onSelect={handleIncomeFilter}
-          />
+          {/* Mobile filters - below search */}
+          <div className="sm:hidden mt-3">
+            <IncomeGroupFilter
+              groups={INCOME_GROUPS}
+              selected={incomeFilter}
+              counts={incomeGroupCounts}
+              onSelect={handleIncomeFilter}
+            />
+          </div>
         </div>
       </div>
 

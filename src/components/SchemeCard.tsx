@@ -1,6 +1,156 @@
-import { ArrowRight, Home, XCircle } from "lucide-react";
+import { ArrowRight, Home, XCircle, TrendingDown, AlertCircle } from "lucide-react";
 import { formatSchemeFields } from "../utils/formatScheme";
+import { useIncome } from "../context/IncomeContext";
 import React from "react";
+
+// Tax deduction calculation for income > 12 lakh (New Income Tax Regime)
+function calculateTaxAdjustedIncome(annualIncome: number): number {
+  // For income > 12 lakh, apply standard deduction and other deductions
+  // Standard deduction: ₹50,000
+  // Assuming basic deductions for housing loan: ~₹1,50,000 (approximate)
+  if (annualIncome > 1200000) {
+    const deductions = 50000 + 150000; // Standard + housing
+    return Math.max(annualIncome - deductions, annualIncome);
+  }
+  return annualIncome;
+}
+
+// Proper EMI calculation using compound interest formula
+// EMI = (P × r × (1+r)^n) / ((1+r)^n - 1)
+// P = Principal (loan amount after down payment)
+// r = Monthly interest rate (annual ROI / 12 / 100)
+// n = Number of months
+function calculateEMIWithInterest(
+  principalInRupees: number,
+  annualROI: number,
+  tenureInYears: number
+): number {
+  if (principalInRupees <= 0 || annualROI < 0 || tenureInYears <= 0) return 0;
+
+  const monthlyRate = annualROI / 12 / 100;
+  const numberOfMonths = tenureInYears * 12;
+
+  // Handle 0% interest case
+  if (monthlyRate === 0) {
+    return Math.round(principalInRupees / numberOfMonths);
+  }
+
+  // Compound interest EMI formula
+  const numerator = principalInRupees * monthlyRate * Math.pow(1 + monthlyRate, numberOfMonths);
+  const denominator = Math.pow(1 + monthlyRate, numberOfMonths) - 1;
+  return Math.round(numerator / denominator);
+}
+
+function calculateEMI(
+  costStr: string,
+  income: { amount: number; percent: number; tenure: number; roi: number; downPayment: number } | null
+): number | null {
+  if (!income) return null;
+
+  // Extract numeric cost from "₹25L" or "₹1.5Cr" format
+  const cleanCost = costStr.replace(/[^0-9.]/g, "");
+  let costInRupees = Number(cleanCost);
+
+  if (!Number.isFinite(costInRupees)) return null;
+
+  // Handle Lakh (L) and Crore (Cr) suffixes
+  if (costStr.includes("L")) costInRupees *= 100000;
+  if (costStr.includes("Cr")) costInRupees *= 10000000;
+
+  // Calculate principal after down payment
+  const downPaymentAmount = (costInRupees * income.downPayment) / 100;
+  const loanAmount = costInRupees - downPaymentAmount;
+
+  // Calculate EMI with proper interest formula
+  return calculateEMIWithInterest(loanAmount, income.roi, income.tenure);
+}
+
+function calculateEMIRange(
+  costStr: string,
+  income: { amount: number; percent: number; tenure: number; roi: number; downPayment: number } | null
+): { min: number; max: number } | null {
+  if (!income) return null;
+
+  // Check if cost is a range (e.g., "₹75.37L - ₹84.68L")
+  if (!costStr.includes("-")) {
+    const emi = calculateEMI(costStr, income);
+    return emi ? { min: emi, max: emi } : null;
+  }
+
+  // Split the range
+  const parts = costStr.split("-").map((s) => s.trim());
+  if (parts.length !== 2) {
+    const emi = calculateEMI(costStr, income);
+    return emi ? { min: emi, max: emi } : null;
+  }
+
+  const minCost = calculateEMI(parts[0], income);
+  const maxCost = calculateEMI(parts[1], income);
+
+  if (minCost === null || maxCost === null) return null;
+
+  return {
+    min: Math.min(minCost, maxCost),
+    max: Math.max(minCost, maxCost),
+  };
+}
+
+// Helper function to extract cost in rupees from cost string
+function extractCostInRupees(costStr: string): number {
+  if (!costStr) return 0;
+  
+  // Handle range (e.g., "₹75.37L - ₹84.68L") - use the first value
+  if (costStr.includes("-")) {
+    costStr = costStr.split("-")[0].trim();
+  }
+  
+  // Extract all numbers and dots
+  const cleanCost = costStr.match(/[\d.]+/)?.[0] ?? "";
+  let costInRupees = Number(cleanCost);
+
+  if (!Number.isFinite(costInRupees) || costInRupees === 0) return 0;
+
+  // Handle Lakh (L) and Crore (Cr) suffixes - check original string
+  if (costStr.toUpperCase().includes("CR")) {
+    costInRupees *= 10000000; // Crore
+  } else if (costStr.toUpperCase().includes("L")) {
+    costInRupees *= 100000; // Lakh
+  }
+
+  return Math.round(costInRupees);
+}
+
+// Helper function to extract min and max costs from a range
+function extractCostRange(costStr: string): { min: number; max: number } {
+  if (!costStr) return { min: 0, max: 0 };
+  
+  // Check if it's a range
+  if (costStr.includes("-")) {
+    const parts = costStr.split("-").map(s => s.trim());
+    const minCost = extractCostInRupees(parts[0]);
+    const maxCost = extractCostInRupees(parts[1]);
+    return {
+      min: Math.min(minCost, maxCost),
+      max: Math.max(minCost, maxCost),
+    };
+  }
+  
+  // Single value
+  const singleCost = extractCostInRupees(costStr);
+  return { min: singleCost, max: singleCost };
+}
+
+function formatCurrency(n: number) {
+  try {
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+      maximumFractionDigits: 0,
+    }).format(n);
+  } catch {
+    return `₹${Math.round(n).toLocaleString()}`;
+  }
+}
 
 export type Scheme = {
   key: number;
@@ -154,6 +304,7 @@ function buildSchemeDetails(scheme: Scheme, fallback: ReturnType<typeof formatSc
 }
 
 export default function SchemeCard({ scheme, onApply, formatted }: SchemeCardProps): JSX.Element {
+  const { income } = useIncome();
   const incomeStyle =
     INCOME_GROUP_COLORS[(scheme.incomeGroupCode as keyof typeof INCOME_GROUP_COLORS)] || INCOME_GROUP_COLORS.MIG;
   const canApply = scheme.canApplyForScheme;
@@ -272,10 +423,48 @@ export default function SchemeCard({ scheme, onApply, formatted }: SchemeCardPro
             </div>
           </div> */}
 
-          {/* View Details action (small text button bottom-right) */}
+          {/* View Details action with EMI */}
           {!isOpen && (
             <div className="pt-1 border-t border-gray-100">
-              <div className="flex justify-end">
+              <div className="flex justify-between items-center gap-3">
+                {/* EMI Display */}
+                <div className="flex items-center gap-2">
+                  {(() => {
+                    if (!income) {
+                      return (
+                        <span className="text-xs text-gray-400">
+                          Set income to see EMI
+                        </span>
+                      );
+                    }
+                    const emiRange = calculateEMIRange(costText, income);
+                    if (!emiRange) return null;
+                    
+                    const userEMIBudget = Math.round((income.amount / 12) * income.percent);
+                    const isAffordable = emiRange.min <= userEMIBudget;
+                    const isTight = emiRange.max > userEMIBudget && emiRange.min <= userEMIBudget;
+                    
+                    const emiDisplay = emiRange.min === emiRange.max 
+                      ? formatCurrency(emiRange.min)
+                      : `${formatCurrency(emiRange.min)} - ${formatCurrency(emiRange.max)}`;
+                    
+                    return (
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <TrendingDown size={14} className={isAffordable && !isTight ? "text-emerald-600" : "text-amber-600"} />
+                          <span className={`text-xs font-medium ${isAffordable && !isTight ? "text-emerald-700" : "text-amber-700"}`}>
+                            Est. EMI: {emiDisplay}/mo
+                          </span>
+                        </div>
+                        <div className="text-xs text-gray-500 mt-0.5">
+                          Your budget: {formatCurrency(userEMIBudget)}/mo
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+                
+                {/* View Details Button */}
                 <button
                   type="button"
                   onClick={(e) => {
@@ -335,6 +524,109 @@ export default function SchemeCard({ scheme, onApply, formatted }: SchemeCardPro
               </div>
 
               <div className="p-5 space-y-4 max-h-[70vh] overflow-auto">
+                {/* Affordability Comparison Section */}
+                {(() => {
+                  if (!income) {
+                    return (
+                      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                        <div className="flex items-start gap-3">
+                          <AlertCircle size={18} className="text-blue-600 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <p className="text-sm font-semibold text-blue-900">Set Your Income</p>
+                            <p className="text-xs text-blue-700 mt-1">Use the "Calculate EMI" button to set your annual income and see if you can afford this scheme.</p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  const emiRange = calculateEMIRange(costText, income);
+                  if (!emiRange) return null;
+
+                  const monthlyIncome = income.amount / 12;
+                  const userEMIBudget = Math.round(monthlyIncome * income.percent);
+                  const isAffordable = emiRange.min <= userEMIBudget;
+                  const isTight = emiRange.max > userEMIBudget && emiRange.min <= userEMIBudget;
+                  
+                  const emiDisplay = emiRange.min === emiRange.max 
+                    ? formatCurrency(emiRange.min)
+                    : `${formatCurrency(emiRange.min)} - ${formatCurrency(emiRange.max)}`;
+
+                  // Check if income is above 12 lakh for tax deduction info
+                  const isTaxDeductible = income.amount > 1200000;
+
+                  return (
+                    <div className={`border rounded-xl p-4 ${isAffordable && !isTight ? "bg-emerald-50 border-emerald-200" : "bg-amber-50 border-amber-200"}`}>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-700">Your Annual Income:</span>
+                          <span className="font-semibold text-gray-900">{formatCurrency(income.amount)}</span>
+                        </div>
+                        {isTaxDeductible && (
+                          <div className="flex justify-between items-center text-xs bg-white bg-opacity-50 px-2 py-1 rounded">
+                            <span className="text-gray-600">💡 Tax eligible (&gt;₹12L)</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-700">Monthly Income:</span>
+                          <span className="font-semibold text-gray-900">{formatCurrency(Math.round(monthlyIncome))}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-700">Affordable EMI Budget ({income.percent * 100 | 0}%):</span>
+                          <span className="font-semibold text-gray-900">{formatCurrency(userEMIBudget)}/mo</span>
+                        </div>
+                        <div className="border-t border-gray-300 my-2" />
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-700">Down Payment ({income.downPayment}%):</span>
+                          <span className="text-xs text-gray-600">
+                            {(() => {
+                              const costRange = extractCostRange(costText);
+                              const dpMin = Math.round((costRange.min * income.downPayment) / 100);
+                              const dpMax = Math.round((costRange.max * income.downPayment) / 100);
+                              
+                              if (income.downPayment === 0) {
+                                return "₹0 (included in EMI)";
+                              }
+                              
+                              if (dpMin === dpMax) {
+                                return formatCurrency(dpMin);
+                              }
+                              
+                              return `${formatCurrency(dpMin)} - ${formatCurrency(dpMax)}`;
+                            })()}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-700">Interest Rate ({income.roi}% p.a.):</span>
+                          <span className="text-xs text-gray-600">{income.tenure} years tenure</span>
+                        </div>
+                        <div className="border-t border-gray-300 my-2" />
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-700">Scheme's Estimated EMI:</span>
+                          <span className={`font-semibold ${isAffordable && !isTight ? "text-emerald-700" : "text-amber-700"}`}>
+                            {emiDisplay}/mo
+                          </span>
+                        </div>
+                        <div className="pt-2">
+                          {isAffordable && !isTight ? (
+                            <p className="text-xs font-medium text-emerald-700 flex items-center gap-1">
+                              ✓ This scheme is within your budget
+                            </p>
+                          ) : isTight ? (
+                            <p className="text-xs font-medium text-amber-700 flex items-center gap-1">
+                              ⚠️ EMI range includes values above your budget. Check max EMI carefully.
+                            </p>
+                          ) : (
+                            <p className="text-xs font-medium text-amber-700 flex items-center gap-1">
+                              ⚠️ EMI is higher than your budget. Consider adjusting affordability % or increasing income.
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 {/* Keep existing card details visible inside modal */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="bg-gray-50 rounded-xl p-3">

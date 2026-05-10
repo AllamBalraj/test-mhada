@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { MessageSquare, X } from "lucide-react";
 import { submitFeedback } from "../../services/feedback";
 
@@ -67,6 +67,21 @@ export default function FeedbackWidget(): JSX.Element {
 
   const [touched, setTouched] = useState<Partial<Record<keyof FormState, boolean>>>({});
   const [submitted, setSubmitted] = useState(false);
+
+  // Listen for open-feedback event from IncomeWidget
+  useEffect(() => {
+    const handleOpenFeedback = (event: any) => {
+      setOpen(true);
+      // Auto-select "Bug Report" if provided in event detail
+      if (event.detail?.improve === 'Bug Report') {
+        setState((s) => ({ ...s, improve: 'Bug Report' }));
+        setTouched((t) => ({ ...t, improve: true }));
+      }
+    };
+    
+    window.addEventListener('open-feedback', handleOpenFeedback);
+    return () => window.removeEventListener('open-feedback', handleOpenFeedback);
+  }, []);
 
   const errors = useMemo(() => validate(state), [state]);
   const canSubmit = Object.keys(errors).length === 0 && !busy;
