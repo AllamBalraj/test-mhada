@@ -177,6 +177,7 @@ export type Scheme = {
 type SchemeCardProps = {
   scheme: Scheme;
   onApply?: (scheme: Scheme) => void;
+  onOpenIncomeModal?: () => void;
   formatted?: {
     carpetAreaText?: string;
     builtupAreaText?: string;
@@ -303,7 +304,7 @@ function buildSchemeDetails(scheme: Scheme, fallback: ReturnType<typeof formatSc
   return rows;
 }
 
-export default function SchemeCard({ scheme, onApply, formatted }: SchemeCardProps): JSX.Element {
+export default function SchemeCard({ scheme, onApply, formatted, onOpenIncomeModal }: SchemeCardProps): JSX.Element {
   const { income } = useIncome();
   const incomeStyle =
     INCOME_GROUP_COLORS[(scheme.incomeGroupCode as keyof typeof INCOME_GROUP_COLORS)] || INCOME_GROUP_COLORS.MIG;
@@ -428,13 +429,26 @@ export default function SchemeCard({ scheme, onApply, formatted }: SchemeCardPro
             <div className="pt-1 border-t border-gray-100">
               <div className="flex justify-between items-center gap-3">
                 {/* EMI Display */}
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-1">
                   {(() => {
                     if (!income) {
                       return (
-                        <span className="text-xs text-gray-400">
-                          Set income to see EMI
-                        </span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onOpenIncomeModal?.();
+                          }}
+                          className="w-full text-left"
+                        >
+                          <div className="text-xs bg-gradient-to-r from-orange-50 to-orange-100 text-orange-700 px-3 py-2 rounded-md font-medium flex items-center gap-1.5 border border-orange-200 hover:shadow-md hover:from-orange-100 hover:to-orange-200 transition-all cursor-pointer group">
+                            <span className="text-sm animate-bounce">🔍</span>
+                            <div className="flex-1">
+                              <p className="font-semibold group-hover:text-orange-800">Calculate EMI</p>
+                              <p className="text-xs opacity-75 group-hover:opacity-100">See if this fits your budget</p>
+                            </div>
+                          </div>
+                        </button>
                       );
                     }
                     const emiRange = calculateEMIRange(costText, income);
@@ -449,7 +463,7 @@ export default function SchemeCard({ scheme, onApply, formatted }: SchemeCardPro
                       : `${formatCurrency(emiRange.min)} - ${formatCurrency(emiRange.max)}`;
                     
                     return (
-                      <div>
+                      <div className="flex-1">
                         <div className="flex items-center gap-1.5">
                           <TrendingDown size={14} className={isAffordable && !isTight ? "text-emerald-600" : "text-amber-600"} />
                           <span className={`text-xs font-medium ${isAffordable && !isTight ? "text-emerald-700" : "text-amber-700"}`}>

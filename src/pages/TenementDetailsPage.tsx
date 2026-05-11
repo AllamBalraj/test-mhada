@@ -27,6 +27,14 @@ export default function TenementDetailsPage({ lottery }: TenementDetailsPageProp
   const [searchInput, setSearchInput] = useState<string>("");
   const [incomeFilter, setIncomeFilter] = useState<string>("All");
   const [isFiltering, setIsFiltering] = useState<boolean>(false);
+  const [bannerDismissed, setBannerDismissed] = useState<boolean>(() => {
+    // Check localStorage to see if user has dismissed the banner
+    try {
+      return localStorage.getItem("emi-banner-dismissed") === "true";
+    } catch {
+      return false;
+    }
+  });
   const searchDebounceTimerRef = useRef<number | null>(null);
   const incomeModalRef = useRef<IncomeModalHandle>(null);
 
@@ -150,11 +158,14 @@ export default function TenementDetailsPage({ lottery }: TenementDetailsPageProp
               {/* Calculate EMI button - visible on mobile, beside search */}
               <button
                 onClick={() => incomeModalRef.current?.openModal()}
-                className="sm:hidden flex items-center justify-center px-3 py-2 bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-700 hover:to-orange-600 text-white rounded-lg font-semibold transition-all shadow-sm flex-shrink-0"
+                className="sm:hidden flex items-center justify-center px-3 py-2 bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-700 hover:to-orange-600 text-white rounded-lg font-semibold transition-all shadow-sm flex-shrink-0 relative group"
                 type="button"
                 aria-label="Calculate EMI"
               >
-                <Calculator size={18} />
+                <div className="absolute inset-0 bg-orange-400 rounded-lg opacity-0 group-hover:opacity-20 animate-pulse transition-opacity" />
+                <Calculator size={18} className="relative z-10" />
+                {/* Attention pulse ring */}
+                <div className="absolute -inset-2 bg-orange-400 rounded-lg opacity-0 group-hover:opacity-10 animate-ping" />
               </button>
             </div>
 
@@ -169,12 +180,17 @@ export default function TenementDetailsPage({ lottery }: TenementDetailsPageProp
               {/* Calculate EMI button - hidden on mobile */}
               <button
                 onClick={() => incomeModalRef.current?.openModal()}
-                className="flex items-center gap-2 px-4 py-1.5 bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-700 hover:to-orange-600 text-white rounded-lg text-sm font-semibold transition-all shadow-sm flex-shrink-0"
+                className="flex items-center gap-2 px-4 py-1.5 bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-700 hover:to-orange-600 text-white rounded-lg text-sm font-semibold transition-all shadow-sm flex-shrink-0 relative group overflow-hidden"
                 type="button"
                 aria-label="Calculate EMI"
               >
-                <Calculator size={16} />
-                <span>Calculate EMI</span>
+                {/* Background pulse effect */}
+                <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-10 animate-pulse" />
+                {/* Content */}
+                <Calculator size={16} className="relative z-10" />
+                <span className="relative z-10">Calculate EMI</span>
+                {/* Attention indicator pulse ring */}
+                <div className="absolute -right-1 -top-1 w-3 h-3 bg-yellow-300 rounded-full animate-pulse opacity-70" />
               </button>
             </div>
           </div>
@@ -191,7 +207,50 @@ export default function TenementDetailsPage({ lottery }: TenementDetailsPageProp
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="max-w-7xl mx-auto px-4 py-8 space-y-6">
+        {/* First-time User EMI Banner */}
+        {/* {!bannerDismissed && (
+          <div className="bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-2xl p-5 shadow-lg border border-orange-400 animate-pulse-slow">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-xl">💡</span>
+                  <h3 className="font-bold text-base md:text-lg">Calculate Your EMI & Compare</h3>
+                </div>
+                <p className="text-sm md:text-base opacity-95 leading-relaxed">
+                  Set your annual income to instantly see the estimated monthly EMI for each scheme and check if it fits your budget. Make informed decisions faster!
+                </p>
+                <button
+                  onClick={() => {
+                    incomeModalRef.current?.openModal();
+                  }}
+                  className="mt-3 inline-flex items-center gap-2 bg-white text-orange-600 hover:bg-orange-50 px-4 py-2 rounded-lg font-semibold text-sm transition-colors"
+                >
+                  <Calculator size={16} />
+                  Get Started Now
+                </button>
+              </div>
+              <button
+                onClick={() => {
+                  setBannerDismissed(true);
+                  try {
+                    localStorage.setItem("emi-banner-dismissed", "true");
+                  } catch {
+                    // Ignore localStorage errors
+                  }
+                }}
+                className="flex-shrink-0 text-white hover:bg-white/20 rounded-lg p-1 transition-colors"
+                aria-label="Close banner"
+              >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        )} */}
+
         {isLoading ? (
           <SchemeGrid mode="loading" />
         ) : filtered.length === 0 ? (
@@ -204,7 +263,13 @@ export default function TenementDetailsPage({ lottery }: TenementDetailsPageProp
         ) : (
           <SchemeGrid mode="data">
             {uiFiltered.map(({ scheme, formatted }) => (
-              <SchemeCard key={scheme.key} scheme={scheme} formatted={formatted} onApply={handleViewInMhadaWebsite} />
+              <SchemeCard
+                key={scheme.key}
+                scheme={scheme}
+                formatted={formatted}
+                onApply={handleViewInMhadaWebsite}
+                onOpenIncomeModal={() => incomeModalRef.current?.openModal()}
+              />
             ))}
           </SchemeGrid>
         )}
