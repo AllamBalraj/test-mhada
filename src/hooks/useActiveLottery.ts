@@ -9,7 +9,7 @@ export function useActiveLottery(lotteryCode: string): Lottery | null {
 
     const fetchLottery = async () => {
       try {
-        const url = "https://appro.mhada.gov.in/guest/fetch-active-lotteries";
+        const url = "/api/mhada/guest/fetch-active-lotteries";
         const res = await fetch(url);
         if (!res.ok) throw new Error("Failed to fetch lotteries");
 

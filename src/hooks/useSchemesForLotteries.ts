@@ -33,7 +33,7 @@ export function useSchemesForLotteries(lotteryIds: number[]): Scheme[] | null {
 
   const urls = useMemo(() => {
     const ids = lotteryKey ? lotteryKey.split(",").map((s) => Number(s)).filter(Number.isFinite) : [];
-    return ids.map((id) => `https://appro.mhada.gov.in/guest/apply/lottery/${id}`);
+    return ids.map((id) => `/api/mhada/guest/apply/lottery/${id}`);
   }, [lotteryKey]);
 
   useEffect(() => {
